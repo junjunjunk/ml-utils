@@ -132,9 +132,7 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
 
         denominator = X.data + self.k1 * (1 - self.b + self.b * rep / avgdl)
         data = (X.data * (self.k1 + 1)) / (denominator)
-        print(X.data.shape, data.shape, rep.shape)
         X = sp.csr_matrix((data, X.indices, X.indptr), shape=X.shape) * self._idf_diag
-        print(X.shape)
         if self.norm:
             X = normalize(X, norm=self.norm, copy=False)
 
