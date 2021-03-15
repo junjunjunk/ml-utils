@@ -52,15 +52,17 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
     (4, 8)
     """
 
-    def __init__(self, norm="l2"):
+    def __init__(self, norm="l2", k1=1.2, b=0.75):
         self.norm = norm
+        self.k1 = k1
+        self.b = b
 
     def fit(self, X, y=None):
-        """Learn the idf vector (global term weights).
+        """Learn(Calculate) the idf vector (global term weights).
         Parameters
         ----------
         X : sparse matrix of shape n_samples, n_features)
-            A matrix of term/token counts.
+            A matrix of term/token counts. (CountVector)
         """
         X = check_array(X, accept_sparse=("csr", "csc"))
 
@@ -70,12 +72,11 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
         dtype = X.dtype if X.dtype in FLOAT_DTYPES else np.float64
         n_samples, n_features = X.shape
 
-        df = self._document_frequency(X)
+        document_frequency = self._document_frequency(X)
 
         # NOTE: copy=False is necessary for scipy >= 1.1
-        df = df.astype(dtype, copy=False)
-
-        idf = np.log((n_samples - df + 0.5) / df + 0.5)
+        document_frequency = document_frequency.astype(dtype, copy=False)
+        idf = np.log((n_samples - document_frequency + 0.5) / document_frequency + 0.5)
         self._idf_diag = sp.diags(
             idf, offsets=0, shape=(n_features, n_features), format="csr", dtype=dtype
         )
@@ -87,7 +88,7 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
         Parameters
         ----------
         X : sparse matrix of (n_samples, n_features)
-            a matrix of term/token counts
+            a matrix of term/token counts (CountVector)
         copy : bool, default=True
             Whether to copy X and operate on the copy or perform in-place
             operations.
@@ -100,9 +101,6 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
             X = sp.csr_matrix(X, dtype=np.float64)
 
         n_samples, n_features = X.shape
-        if self.sublinear_tf:
-            np.log(X.data, X.data)
-            X.data += 1
 
         check_is_fitted(self, attributes=["idf"], msg="idf vector is not fitted")
 
@@ -113,8 +111,30 @@ class BM25Transformer(TransformerMixin, BaseEstimator):
                 " has been trained with n_features=%d"
                 % (n_features, expected_n_features)
             )
-        X = X * self._idf_diag
 
+        # document_length
+        dl = X.sum(axis=1)
+
+        # Number of non-zero elements in each row
+        # Shape is (n_samples, )
+        sz = X.indptr[1:] - X.indptr[0:-1]
+        # In each row, repeat `dl` for `sz` times
+        # Shape is (sum(sz), )
+        # Example
+        # -------
+        # dl = [4, 5, 6]
+        # sz = [1, 2, 3]
+        # rep = [4, 5, 5, 6, 6, 6]
+        rep = np.repeat(np.asarray(dl), sz)
+
+        # average of document length
+        avgdl = np.mean(dl)
+
+        denominator = X.data + self.k1 * (1 - self.b + self.b * rep / avgdl)
+        data = (X.data * (self.k1 + 1)) / (denominator)
+        print(X.data.shape, data.shape, rep.shape)
+        X = sp.csr_matrix((data, X.indices, X.indptr), shape=X.shape) * self._idf_diag
+        print(X.shape)
         if self.norm:
             X = normalize(X, norm=self.norm, copy=False)
 
@@ -406,7 +426,9 @@ class BM25Vectorizer(CountVectorizer):
             Tf-idf-weighted document-term matrix.
         """
         self._check_params()
+        # fit_transform by CountVectorizer
         X = super().fit_transform(raw_documents)
+
         self._bm25.fit(X)
         # X is already a transformed view of raw_documents so we set copy to False
         return self._bm25.transform(X, copy=False)
@@ -426,5 +448,7 @@ class BM25Vectorizer(CountVectorizer):
         """
         check_is_fitted(self, msg="The TF-IDF vectorizer is not fitted")
 
+        # CountVector
         X = super().transform(raw_documents)
+
         return self._bm25.transform(X, copy=False)
