@@ -2,10 +2,10 @@ import warnings
 
 import numpy as np
 import scipy.sparse as sp
-from skelearn.utils.validation import FLOAT_DTYPES, check_array, check_is_fitted
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
+from sklearn.utils.validation import FLOAT_DTYPES, check_array, check_is_fitted
 
 
 class BM25Transformer(TransformerMixin, BaseEstimator):
