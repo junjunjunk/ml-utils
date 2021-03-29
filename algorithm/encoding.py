@@ -27,7 +27,8 @@ def target_encode(
     # Encoding test data with all the train data
     if test_df is not None:
         target_mean = train_df[[c, label]].groupby(c)[label].mean()
-        test_df[f"target_{c}"] = target_mean[c]
+        test_df[f"target_{c}"] = target_mean
+    print("Test encoded")
 
     # Encoding train data
     folds = StratifiedKFold(
