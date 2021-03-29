@@ -56,7 +56,6 @@ def target_encode(
         folds = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
 
         for main_idx, rest_idx in folds.split(train_df):
-            print(rest_idx)
             target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
             ts[rest_idx] = train_df[c].iloc[rest_idx].map(target_mean)
 
