@@ -37,7 +37,7 @@ def target_encode(
 
     ts = pd.Series(np.empty(train_df.shape[0]), index=train_df.index)
 
-    for main_idx, rest_idx in folds.split(train_df, train_df.label):
+    for main_idx, rest_idx in folds.split(train_df, train_df[label]):
         target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
         ts[rest_idx] = target_mean
 
