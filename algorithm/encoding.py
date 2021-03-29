@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold
 
 
 # TODO: Smoothing
@@ -12,6 +12,7 @@ def target_encode(
     n_splits: int = 5,
     shuffle: bool = True,
     random_state: int = 42,
+    is_straitified: bool = False,
 ) -> None:
     """Target Encoding function
 
@@ -23,6 +24,7 @@ def target_encode(
         n_splits (int, optional): The number of folds. Defaults to 5.
         shuffle (bool, optional): enable shuffle. Defaults to True.
         random_state (int, optional): seed number. Defaults to 42.
+        is_straitified (bool,optional): valid straitified KFold. Defaults to True.
     """
     # Encoding test data with all the train data
     if test_df is not None:
@@ -31,14 +33,22 @@ def target_encode(
     print("Test encoded")
 
     # Encoding train data
-    folds = StratifiedKFold(
-        n_splits=n_splits, shuffle=shuffle, random_state=random_state
-    )
 
     ts = pd.Series(np.empty(train_df.shape[0]), index=train_df.index)
 
-    for main_idx, rest_idx in folds.split(train_df, train_df[label]):
-        target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
-        ts[rest_idx] = target_mean
+    if is_straitified:
+        folds = StratifiedKFold(
+            n_splits=n_splits, shuffle=shuffle, random_state=random_state
+        )
+
+        for main_idx, rest_idx in folds.split(train_df, train_df[label]):
+            target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
+            ts[rest_idx] = target_mean
+    else:
+        folds = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+
+        for main_idx, rest_idx in folds.split(train_df):
+            target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
+            ts[rest_idx] = target_mean
 
     train_df[f"tartget_{c}"] = ts
