@@ -56,7 +56,7 @@ def target_encode(
             target_mean = train_df[[c, label]].iloc[main_idx].groupby(c)[label].mean()
             ts[rest_idx] = train_df[c].iloc[rest_idx].map(target_mean)
 
-    train_df[f"tartget_{c}"] = ts
+    train_df[f"target_{c}"] = ts
 
     if test_df is not None:
         return train_df, test_df
