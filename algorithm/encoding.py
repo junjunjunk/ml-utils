@@ -1,3 +1,5 @@
+from typing import Tuple, Union
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -13,7 +15,7 @@ def target_encode(
     shuffle: bool = True,
     random_state: int = 42,
     is_straitified: bool = False,
-) -> None:
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.DataFrame]]:
     """Target Encoding function
 
     Args:
@@ -25,6 +27,9 @@ def target_encode(
         shuffle (bool, optional): enable shuffle. Defaults to True.
         random_state (int, optional): seed number. Defaults to 42.
         is_straitified (bool,optional): valid straitified KFold. Defaults to True.
+
+    Returns:
+        Union[pd.DataFrame,Tuple[pd.DataFrame,pd.DataFrame]]: train_df or (train_df,test_df)
     """
     # Encoding test data with all the train data
     if test_df is not None:
@@ -52,3 +57,8 @@ def target_encode(
             ts[rest_idx] = train_df[c].iloc[rest_idx].map(target_mean)
 
     train_df[f"tartget_{c}"] = ts
+
+    if test_df is not None:
+        return train_df, test_df
+    else:
+        return train_df
